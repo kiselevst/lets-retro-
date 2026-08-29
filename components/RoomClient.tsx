@@ -91,7 +91,7 @@ export function RoomClient({ board }: RoomClientProps) {
           {participant.role === 'moderator' ? ' · модератор' : ''}
         </span>
       </header>
-      <Board boardId={board.id} />
+      <Board boardId={board.id} participant={participant} />
     </div>
   );
 }

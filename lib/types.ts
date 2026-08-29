@@ -1,13 +1,6 @@
-// Ручные типы под схему из supabase/migrations/0001_init.sql.
-// Не сгенерированы через `supabase gen types`, чтобы не тащить в MVP лишний тул —
-// но структура 1:1 повторяет миграцию. Если схема поменяется, поправить нужно
-// только этот файл (и, если появилось поле, миграцию).
-//
-// Важно: форма ниже (Relationships на каждой таблице, Views/Functions/Enums/
-// CompositeTypes на уровне схемы) — не декоративная, а именно то, что ожидает
-// @supabase/supabase-js для корректного вывода типов у .insert()/.update().
-// Без Relationships библиотека не может сопоставить тип и типизирует insert
-// как never[], что и происходило в билде.
+// Ручные типы под схему из supabase/migrations/. Не сгенерированы через
+// `supabase gen types`, чтобы не тащить в MVP лишний тул — структура 1:1
+// повторяет миграции. Если схема меняется, поправить нужно только этот файл.
 
 export type ParticipantRole = 'moderator' | 'participant';
 export type ColumnKey = 'well' | 'notwell' | 'actions';
@@ -108,48 +101,14 @@ export type CardUpdate = Partial<CardInsert>;
 
 export interface VoteRow {
   id: string;
+  board_id: string;
   card_id: string;
   participant_id: string;
   created_at: string;
 }
-export type VoteInsert = Pick<VoteRow, 'card_id' | 'participant_id'> & Partial<VoteRow>;
+export type VoteInsert = Pick<VoteRow, 'board_id' | 'card_id' | 'participant_id'> &
+  Partial<VoteRow>;
 export type VoteUpdate = Partial<VoteInsert>;
-
-// Generic-тип для createClient<Database>(...) — форма ниже соответствует тому,
-// что генерирует `supabase gen types typescript`, это важно для корректного
-// вывода типов внутри supabase-js (см. комментарий вверху файла).
-export interface Database {
-  public: {
-    Tables: {
-      boards: { Row: BoardRow; Insert: BoardInsert; Update: BoardUpdate; Relationships: [] };
-      participants: {
-        Row: ParticipantRow;
-        Insert: ParticipantInsert;
-        Update: ParticipantUpdate;
-        Relationships: [];
-      };
-      board_settings: {
-        Row: BoardSettingsRow;
-        Insert: BoardSettingsInsert;
-        Update: BoardSettingsUpdate;
-        Relationships: [];
-      };
-      timer_state: {
-        Row: TimerStateRow;
-        Insert: TimerStateInsert;
-        Update: TimerStateUpdate;
-        Relationships: [];
-      };
-      columns: { Row: ColumnRow; Insert: ColumnInsert; Update: ColumnUpdate; Relationships: [] };
-      cards: { Row: CardRow; Insert: CardInsert; Update: CardUpdate; Relationships: [] };
-      votes: { Row: VoteRow; Insert: VoteInsert; Update: VoteUpdate; Relationships: [] };
-    };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
-    Enums: Record<string, never>;
-    CompositeTypes: Record<string, never>;
-  };
-}
 
 // Удобные составные типы для использования в компонентах/хуках дальше по проекту.
 export interface BoardWithSettings extends BoardRow {
