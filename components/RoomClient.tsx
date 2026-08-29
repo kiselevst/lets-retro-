@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { getStoredParticipant, storeParticipant, type StoredParticipant } from '@/lib/participant';
 import { joinBoardAsParticipant } from '@/lib/board';
+import { Board } from './Board';
 
 interface RoomClientProps {
   board: { id: string; name: string; code: string };
@@ -77,16 +78,20 @@ export function RoomClient({ board }: RoomClientProps) {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-2 p-6 text-center">
-      <h1 className="font-display text-2xl font-bold">{board.name}</h1>
-      <p className="text-ink-dim">
-        Вы на доске как <b className="text-ink">{participant.name}</b>
-        {participant.role === 'moderator' ? ' · модератор' : ''}.
-      </p>
-      <p className="max-w-sm text-sm text-ink-dim">
-        Столбцы и карточки появятся на этапе 5. Код доски для запасного входа:{' '}
-        <span className="font-mono text-amber">{board.code}</span>.
-      </p>
-    </main>
+    <div className="flex min-h-screen flex-col">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-bg-soft px-6 py-3.5">
+        <div className="flex items-center gap-3">
+          <h1 className="font-display text-lg font-bold">{board.name}</h1>
+          <span className="rounded-lg border border-line bg-panel px-2.5 py-1 font-mono text-xs text-amber">
+            {board.code}
+          </span>
+        </div>
+        <span className="text-sm text-ink-dim">
+          {participant.name}
+          {participant.role === 'moderator' ? ' · модератор' : ''}
+        </span>
+      </header>
+      <Board boardId={board.id} />
+    </div>
   );
 }
