@@ -96,3 +96,22 @@ export async function completeRetro(boardId: string): Promise<void> {
     .eq('board_id', boardId);
   if (error) throw error;
 }
+
+export async function resetVotes(boardId: string): Promise<void> {
+  const { error } = await supabase.from('votes').delete().eq('board_id', boardId);
+  if (error) throw error;
+}
+
+export async function clearBoard(boardId: string): Promise<void> {
+  const { error } = await supabase.from('cards').delete().eq('board_id', boardId);
+  if (error) throw error;
+}
+
+// boards удаляется одним запросом — participants/board_settings/timer_state/
+// columns/cards (а через cards ещё и votes) уже настроены с "on delete
+// cascade" ещё в самой первой миграции, так что чистить их по отдельности
+// не нужно.
+export async function deleteBoard(boardId: string): Promise<void> {
+  const { error } = await supabase.from('boards').delete().eq('id', boardId);
+  if (error) throw error;
+}

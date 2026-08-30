@@ -12,6 +12,9 @@ interface CardProps {
   votingDisabled: boolean;
   allowSelfVote: boolean;
   remainingVotes: number;
+  hideAuthor: boolean;
+  hideVotes: boolean;
+  revealed: boolean;
   columnKey: ColumnKey;
   locked: boolean;
   isRemoteHovered: boolean;
@@ -34,6 +37,9 @@ export function Card({
   votingDisabled,
   allowSelfVote,
   remainingVotes,
+  hideAuthor,
+  hideVotes,
+  revealed,
   columnKey,
   locked,
   isRemoteHovered,
@@ -52,7 +58,14 @@ export function Card({
   const [dragOver, setDragOver] = useState(false);
 
   const isOwner = card.author_participant_id === participant.participantId;
-  const canManage = !locked && (isOwner || participant.role === 'moderator');
+  // Пока модератор не нажал "Показать карточки" — содержимое чужих карточек
+  // спрятано под блюром. Свою карточку видно всегда. Модератор не является
+  // исключением — он тоже не должен видеть чужие карточки раньше времени.
+  const hideContent = !revealed && !isOwner;
+
+  const canDelete = !locked && (isOwner || participant.role === 'moderator');
+  const canEdit = !locked && !hideContent && (isOwner || participant.role === 'moderator');
+
   const voteCount = votes.filter((v) => v.card_id === card.id).length;
   const iVoted = votes.some(
     (v) => v.card_id === card.id && v.participant_id === participant.participantId,
@@ -60,7 +73,7 @@ export function Card({
   const selfVoteBlocked = isOwner && !allowSelfVote;
   const canVote = !locked && !votingDisabled && !selfVoteBlocked && (remainingVotes > 0 || iVoted);
   const isMerged = Boolean(card.merged_into);
-  const canDrag = !locked && !isMerged && !editing;
+  const canDrag = !locked && !isMerged && !editing && !hideContent;
   const hasSmart = Boolean(card.smart_success || card.smart_owner || card.smart_deadline);
 
   function handleDragStart(e: DragEvent<HTMLDivElement>) {
@@ -119,12 +132,16 @@ export function Card({
     );
   }
 
+  const authorLabel = hideAuthor ? '—' : authorName;
+  const voteLabel = hideVotes ? '▲' : `▲ ${voteCount}`;
+  const contentClass = hideContent ? 'select-none blur-sm' : '';
+
   return (
     <div
       draggable={canDrag}
       onDragStart={handleDragStart}
       onDragOver={(e) => {
-        if (!locked && !isMerged) {
+        if (!locked && !isMerged && !hideContent) {
           e.preventDefault();
           setDragOver(true);
         }
@@ -144,7 +161,7 @@ export function Card({
       )}
 
       {columnKey === 'actions' && hasSmart ? (
-        <div className="flex flex-col gap-1 text-sm text-ink">
+        <div className={`flex flex-col gap-1 text-sm text-ink ${contentClass}`}>
           <p>
             <span className="text-ink-dim">Задача: </span>
             {card.text}
@@ -169,10 +186,12 @@ export function Card({
           )}
         </div>
       ) : (
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{card.text}</p>
+        <p className={`whitespace-pre-wrap text-sm leading-relaxed text-ink ${contentClass}`}>
+          {card.text}
+        </p>
       )}
 
-      {card.sources.length > 0 && (
+      {!hideContent && card.sources.length > 0 && (
         <div className="mt-2 flex flex-col gap-0.5 border-l-2 border-line pl-2 text-[11px] text-ink-dim">
           {card.sources.map((s, i) => (
             <p key={i}>
@@ -182,14 +201,14 @@ export function Card({
         </div>
       )}
 
-      {isMerged && (
+      {!hideContent && isMerged && (
         <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-amber/40 bg-amber/15 px-2.5 py-0.5 font-mono text-[11px] text-amber">
           🎯 Стало экшеном
         </div>
       )}
 
       <div className="mt-2.5 flex items-center justify-between font-mono text-[11px] text-ink-dim">
-        <span>{authorName}</span>
+        <span>{authorLabel}</span>
         <div className="flex items-center gap-2">
           <button
             onClick={onToggleVote}
@@ -201,10 +220,10 @@ export function Card({
                 : 'border-line bg-white/5 text-ink hover:bg-white/10'
             } disabled:cursor-not-allowed disabled:opacity-40`}
           >
-            ▲ {voteCount}
+            {voteLabel}
           </button>
 
-          {columnKey === 'actions' && !locked && (
+          {columnKey === 'actions' && !locked && !hideContent && (
             <>
               <button
                 onClick={onOpenSmart}
@@ -223,7 +242,7 @@ export function Card({
             </>
           )}
 
-          {columnKey !== 'actions' && !locked && !isMerged && (
+          {columnKey !== 'actions' && !locked && !isMerged && !hideContent && (
             <button
               onClick={onCreateAction}
               className="text-ink-dim hover:text-ink"
@@ -233,22 +252,22 @@ export function Card({
             </button>
           )}
 
-          {canManage && (
-            <>
-              <button
-                onClick={() => {
-                  setDraft(card.text);
-                  setEditing(true);
-                }}
-                className="text-ink-dim hover:text-ink"
-                title="Редактировать"
-              >
-                ✎
-              </button>
-              <button onClick={onDelete} className="text-ink-dim hover:text-coral" title="Удалить">
-                ✕
-              </button>
-            </>
+          {canEdit && (
+            <button
+              onClick={() => {
+                setDraft(card.text);
+                setEditing(true);
+              }}
+              className="text-ink-dim hover:text-ink"
+              title="Редактировать"
+            >
+              ✎
+            </button>
+          )}
+          {canDelete && (
+            <button onClick={onDelete} className="text-ink-dim hover:text-coral" title="Удалить">
+              ✕
+            </button>
           )}
         </div>
       </div>

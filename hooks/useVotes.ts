@@ -5,6 +5,7 @@ import type { VoteRow } from '@/lib/types';
 export function useVotes(boardId: string) {
   const [votes, setVotes] = useState<VoteRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [instanceId] = useState(() => Math.random().toString(36).slice(2));
 
   useEffect(() => {
     let active = true;
@@ -19,7 +20,7 @@ export function useVotes(boardId: string) {
     load();
 
     const channel = supabase
-      .channel(`votes-${boardId}`)
+      .channel(`votes-${boardId}-${instanceId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'votes', filter: `board_id=eq.${boardId}` },
@@ -31,7 +32,7 @@ export function useVotes(boardId: string) {
       active = false;
       supabase.removeChannel(channel);
     };
-  }, [boardId]);
+  }, [boardId, instanceId]);
 
   return { votes, loading };
 }

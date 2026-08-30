@@ -19,6 +19,7 @@ import {
 import { castVote, removeVote } from '@/lib/votes';
 import { completeRetro } from '@/lib/board';
 import { startTimer, stopTimer } from '@/lib/timer';
+import { updateBoardSettings } from '@/lib/boardSettings';
 import type { StoredParticipant } from '@/lib/participant';
 import type { CardRow } from '@/lib/types';
 import { Column } from './Column';
@@ -45,6 +46,9 @@ export function Board({ boardId, participant }: BoardProps) {
   const allowSelfVote = settings?.allow_self_vote ?? false;
   const isCompleted = settings?.completed ?? false;
   const highlightMode = settings?.highlight_mode ?? false;
+  const hideAuthor = settings?.hide_author ?? false;
+  const hideVotes = settings?.hide_votes ?? false;
+  const revealed = settings?.revealed ?? false;
   const myVotesUsed = votes.filter((v) => v.participant_id === participant.participantId).length;
   const remainingVotes = votesLimit - myVotesUsed;
 
@@ -141,6 +145,14 @@ export function Board({ boardId, participant }: BoardProps) {
     }
   }
 
+  async function handleToggleRevealed() {
+    try {
+      await updateBoardSettings(boardId, { revealed: !revealed });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   async function handleStartTimer(minutes: number) {
     try {
       await startTimer(boardId, minutes);
@@ -174,16 +186,26 @@ export function Board({ boardId, participant }: BoardProps) {
           <span className="text-xs text-ink-dim">
             {isCompleted
               ? '✅ Ретро завершено — редактировать можно только «Что делаем»'
-              : 'Перетащите карточку на другую в этом же столбце, чтобы объединить их'}
+              : revealed
+                ? 'Карточки видны всем участникам'
+                : 'Чужие карточки скрыты — видно, что что-то пишут, но не текст'}
           </span>
         </div>
         {participant.role === 'moderator' && !isCompleted && (
-          <button
-            onClick={handleCompleteRetro}
-            className="rounded-lg border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-ink hover:brightness-125"
-          >
-            🏁 Ретро закончилось
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleToggleRevealed}
+              className="rounded-lg border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-ink hover:brightness-125"
+            >
+              {revealed ? '🙈 Скрыть карточки' : '👁 Показать карточки'}
+            </button>
+            <button
+              onClick={handleCompleteRetro}
+              className="rounded-lg border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-ink hover:brightness-125"
+            >
+              🏁 Ретро закончилось
+            </button>
+          </div>
         )}
       </div>
 
@@ -199,6 +221,9 @@ export function Board({ boardId, participant }: BoardProps) {
             votingDisabled={votingDisabled}
             allowSelfVote={allowSelfVote}
             remainingVotes={remainingVotes}
+            hideAuthor={hideAuthor}
+            hideVotes={hideVotes}
+            revealed={revealed}
             locked={isCompleted && column.key !== 'actions'}
             remoteHoveredCardId={remoteHoveredCardId}
             onCardHover={broadcastHover}

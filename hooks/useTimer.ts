@@ -4,6 +4,7 @@ import type { TimerStateRow } from '@/lib/types';
 
 export function useTimer(boardId: string) {
   const [timer, setTimer] = useState<TimerStateRow | null>(null);
+  const [instanceId] = useState(() => Math.random().toString(36).slice(2));
 
   useEffect(() => {
     let active = true;
@@ -21,7 +22,7 @@ export function useTimer(boardId: string) {
     load();
 
     const channel = supabase
-      .channel(`timer-${boardId}`)
+      .channel(`timer-${boardId}-${instanceId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'timer_state', filter: `board_id=eq.${boardId}` },
@@ -33,7 +34,7 @@ export function useTimer(boardId: string) {
       active = false;
       supabase.removeChannel(channel);
     };
-  }, [boardId]);
+  }, [boardId, instanceId]);
 
   return timer;
 }

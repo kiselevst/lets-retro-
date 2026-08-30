@@ -25,6 +25,9 @@ interface ColumnProps {
   votingDisabled: boolean;
   allowSelfVote: boolean;
   remainingVotes: number;
+  hideAuthor: boolean;
+  hideVotes: boolean;
+  revealed: boolean;
   locked: boolean;
   remoteHoveredCardId: string | null;
   onCardHover: (cardId: string | null) => void;
@@ -47,6 +50,9 @@ export function Column({
   votingDisabled,
   allowSelfVote,
   remainingVotes,
+  hideAuthor,
+  hideVotes,
+  revealed,
   locked,
   remoteHoveredCardId,
   onCardHover,
@@ -145,6 +151,9 @@ export function Column({
             votingDisabled={votingDisabled}
             allowSelfVote={allowSelfVote}
             remainingVotes={remainingVotes}
+            hideAuthor={hideAuthor}
+            hideVotes={hideVotes}
+            revealed={revealed}
             columnKey={column.key}
             locked={locked}
             isRemoteHovered={remoteHoveredCardId === card.id}

@@ -18,6 +18,11 @@ export function useHoverBroadcast(boardId: string, participantId: string, enable
       return;
     }
 
+    // Важно: имя канала — ровно `hover-${boardId}`, БЕЗ уникального хвоста
+    // на инстанс. В отличие от хуков, читающих БД (useBoardData, useCards и
+    // т.д.), это broadcast-канал для обмена сигналами МЕЖДУ разными
+    // участниками — все обязаны сидеть на одном и том же имени топика,
+    // иначе просто перестанут видеть подсветку друг у друга.
     const channel = supabase
       .channel(`hover-${boardId}`, { config: { broadcast: { self: false } } })
       .on('broadcast', { event: 'hover' }, ({ payload }: { payload: HoverPayload }) => {

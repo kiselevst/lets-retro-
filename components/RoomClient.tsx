@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { getStoredParticipant, storeParticipant, type StoredParticipant } from '@/lib/participant';
 import { joinBoardAsParticipant } from '@/lib/board';
 import { Board } from './Board';
@@ -86,10 +87,20 @@ export function RoomClient({ board }: RoomClientProps) {
             {board.code}
           </span>
         </div>
-        <span className="text-sm text-ink-dim">
-          {participant.name}
-          {participant.role === 'moderator' ? ' · модератор' : ''}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-ink-dim">
+            {participant.name}
+            {participant.role === 'moderator' ? ' · модератор' : ''}
+          </span>
+          {participant.role === 'moderator' && (
+            <Link
+              href={`/r/${board.id}/settings`}
+              className="rounded-lg border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-ink hover:brightness-125"
+            >
+              ⚙ Настройки
+            </Link>
+          )}
+        </div>
       </header>
       <Board boardId={board.id} participant={participant} />
     </div>

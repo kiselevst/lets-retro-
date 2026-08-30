@@ -4,6 +4,7 @@ import type { ParticipantRow } from '@/lib/types';
 
 export function useParticipants(boardId: string) {
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
+  const [instanceId] = useState(() => Math.random().toString(36).slice(2));
 
   useEffect(() => {
     let active = true;
@@ -17,7 +18,7 @@ export function useParticipants(boardId: string) {
     load();
 
     const channel = supabase
-      .channel(`participants-${boardId}`)
+      .channel(`participants-${boardId}-${instanceId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'participants', filter: `board_id=eq.${boardId}` },
@@ -29,7 +30,7 @@ export function useParticipants(boardId: string) {
       active = false;
       supabase.removeChannel(channel);
     };
-  }, [boardId]);
+  }, [boardId, instanceId]);
 
   return participants;
 }

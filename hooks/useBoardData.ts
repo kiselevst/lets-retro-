@@ -6,6 +6,12 @@ export function useBoardData(boardId: string) {
   const [columns, setColumns] = useState<ColumnRow[]>([]);
   const [settings, setSettings] = useState<BoardSettingsRow | null>(null);
   const [loading, setLoading] = useState(true);
+  // Уникальный "хвост" на каждый экземпляр хука: доска (Board) и модалка
+  // настроек (SettingsContent) могут одновременно слушать одну и ту же
+  // доску. Supabase возвращает уже существующий канал, если имя совпадает,
+  // а добавлять .on(...) на уже подписанный канал нельзя — отсюда и нужна
+  // уникальность имени, а не просто boardId.
+  const [instanceId] = useState(() => Math.random().toString(36).slice(2));
 
   useEffect(() => {
     let active = true;
@@ -23,12 +29,8 @@ export function useBoardData(boardId: string) {
 
     load();
 
-    // Простая и надёжная стратегия для MVP: при любом изменении просто
-    // перезапрашиваем всё заново, а не пытаемся аккуратно патчить локальное
-    // состояние по типу события. Для размеров одной ретро-доски (единицы
-    // столбцов) разница в производительности не имеет значения.
     const channel = supabase
-      .channel(`board-data-${boardId}`)
+      .channel(`board-data-${boardId}-${instanceId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'columns', filter: `board_id=eq.${boardId}` },
@@ -50,7 +52,7 @@ export function useBoardData(boardId: string) {
       active = false;
       supabase.removeChannel(channel);
     };
-  }, [boardId]);
+  }, [boardId, instanceId]);
 
   return { columns, settings, loading };
 }
