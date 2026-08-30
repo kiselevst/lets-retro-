@@ -26,6 +26,8 @@ interface ColumnProps {
   allowSelfVote: boolean;
   remainingVotes: number;
   locked: boolean;
+  remoteHoveredCardId: string | null;
+  onCardHover: (cardId: string | null) => void;
   onAddCard: (text: string) => Promise<void> | void;
   onToggleVote: (cardId: string, isOwner: boolean) => void;
   onEditCard: (cardId: string, text: string) => void;
@@ -46,6 +48,8 @@ export function Column({
   allowSelfVote,
   remainingVotes,
   locked,
+  remoteHoveredCardId,
+  onCardHover,
   onAddCard,
   onToggleVote,
   onEditCard,
@@ -143,6 +147,9 @@ export function Column({
             remainingVotes={remainingVotes}
             columnKey={column.key}
             locked={locked}
+            isRemoteHovered={remoteHoveredCardId === card.id}
+            onHoverStart={() => onCardHover(card.id)}
+            onHoverEnd={() => onCardHover(null)}
             onToggleVote={() =>
               onToggleVote(card.id, card.author_participant_id === participant.participantId)
             }

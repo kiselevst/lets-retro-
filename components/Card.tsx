@@ -14,6 +14,9 @@ interface CardProps {
   remainingVotes: number;
   columnKey: ColumnKey;
   locked: boolean;
+  isRemoteHovered: boolean;
+  onHoverStart: () => void;
+  onHoverEnd: () => void;
   onToggleVote: () => void;
   onEdit: (text: string) => void;
   onDelete: () => void;
@@ -33,6 +36,9 @@ export function Card({
   remainingVotes,
   columnKey,
   locked,
+  isRemoteHovered,
+  onHoverStart,
+  onHoverEnd,
   onToggleVote,
   onEdit,
   onDelete,
@@ -125,8 +131,10 @@ export function Card({
       }}
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}
+      onMouseEnter={onHoverStart}
+      onMouseLeave={onHoverEnd}
       className={`rounded-lg border p-3.5 shadow-panel transition-colors ${
-        dragOver ? 'border-amber' : 'border-line'
+        dragOver ? 'border-amber' : isRemoteHovered ? 'border-amber ring-2 ring-amber/60' : 'border-line'
       } bg-panel ${card.done && columnKey === 'actions' ? 'opacity-60' : ''}`}
     >
       {columnKey === 'actions' && card.done && (

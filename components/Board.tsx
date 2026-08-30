@@ -5,6 +5,8 @@ import { useBoardData } from '@/hooks/useBoardData';
 import { useCards } from '@/hooks/useCards';
 import { useParticipants } from '@/hooks/useParticipants';
 import { useVotes } from '@/hooks/useVotes';
+import { useTimer } from '@/hooks/useTimer';
+import { useHoverBroadcast } from '@/hooks/useHoverBroadcast';
 import {
   addCard,
   updateCardText,
@@ -16,10 +18,12 @@ import {
 } from '@/lib/cards';
 import { castVote, removeVote } from '@/lib/votes';
 import { completeRetro } from '@/lib/board';
+import { startTimer, stopTimer } from '@/lib/timer';
 import type { StoredParticipant } from '@/lib/participant';
 import type { CardRow } from '@/lib/types';
 import { Column } from './Column';
 import { SmartModal } from './SmartModal';
+import { Timer } from './Timer';
 
 interface BoardProps {
   boardId: string;
@@ -31,6 +35,7 @@ export function Board({ boardId, participant }: BoardProps) {
   const { cards, loading: cardsLoading } = useCards(boardId);
   const participants = useParticipants(boardId);
   const { votes } = useVotes(boardId);
+  const timer = useTimer(boardId);
   const [smartModalCard, setSmartModalCard] = useState<CardRow | null>(null);
 
   const participantNameById = new Map(participants.map((p) => [p.id, p.name]));
@@ -39,8 +44,15 @@ export function Board({ boardId, participant }: BoardProps) {
   const votingDisabled = settings?.voting_disabled ?? false;
   const allowSelfVote = settings?.allow_self_vote ?? false;
   const isCompleted = settings?.completed ?? false;
+  const highlightMode = settings?.highlight_mode ?? false;
   const myVotesUsed = votes.filter((v) => v.participant_id === participant.participantId).length;
   const remainingVotes = votesLimit - myVotesUsed;
+
+  const { remoteHoveredCardId, broadcastHover } = useHoverBroadcast(
+    boardId,
+    participant.participantId,
+    highlightMode,
+  );
 
   function authorNameFor(card: CardRow): string {
     return card.author_participant_id
@@ -129,18 +141,42 @@ export function Board({ boardId, participant }: BoardProps) {
     }
   }
 
+  async function handleStartTimer(minutes: number) {
+    try {
+      await startTimer(boardId, minutes);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleStopTimer() {
+    try {
+      await stopTimer(boardId);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   if (columnsLoading || cardsLoading) {
     return <div className="flex-1 p-8 text-center text-sm text-ink-dim">Загружаем доску…</div>;
   }
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-bg-soft px-6 py-2.5">
-        <span className="text-xs text-ink-dim">
-          {isCompleted
-            ? '✅ Ретро завершено — редактировать можно только «Что делаем»'
-            : 'Перетащите карточку на другую в этом же столбце, чтобы объединить их'}
-        </span>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-bg-soft px-6 py-2.5">
+        <div className="flex flex-wrap items-center gap-4">
+          <Timer
+            timer={timer}
+            isModerator={participant.role === 'moderator'}
+            onStart={handleStartTimer}
+            onStop={handleStopTimer}
+          />
+          <span className="text-xs text-ink-dim">
+            {isCompleted
+              ? '✅ Ретро завершено — редактировать можно только «Что делаем»'
+              : 'Перетащите карточку на другую в этом же столбце, чтобы объединить их'}
+          </span>
+        </div>
         {participant.role === 'moderator' && !isCompleted && (
           <button
             onClick={handleCompleteRetro}
@@ -164,6 +200,8 @@ export function Board({ boardId, participant }: BoardProps) {
             allowSelfVote={allowSelfVote}
             remainingVotes={remainingVotes}
             locked={isCompleted && column.key !== 'actions'}
+            remoteHoveredCardId={remoteHoveredCardId}
+            onCardHover={broadcastHover}
             onAddCard={(text) => addCard(boardId, column.id, participant.participantId, text)}
             onToggleVote={handleToggleVote}
             onEditCard={(cardId, text) => updateCardText(cardId, text)}
