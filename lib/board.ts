@@ -88,3 +88,11 @@ export async function joinBoardAsParticipant(boardId: string, name: string): Pro
   if (error) throw error;
   return data.id;
 }
+
+export async function completeRetro(boardId: string): Promise<void> {
+  const { error } = await supabase
+    .from('board_settings')
+    .update({ completed: true })
+    .eq('board_id', boardId);
+  if (error) throw error;
+}

@@ -25,10 +25,15 @@ interface ColumnProps {
   votingDisabled: boolean;
   allowSelfVote: boolean;
   remainingVotes: number;
+  locked: boolean;
   onAddCard: (text: string) => Promise<void> | void;
   onToggleVote: (cardId: string, isOwner: boolean) => void;
   onEditCard: (cardId: string, text: string) => void;
   onDeleteCard: (cardId: string) => void;
+  onCreateAction: (card: CardRow) => void;
+  onOpenSmart: (card: CardRow) => void;
+  onToggleDoneCard: (card: CardRow) => void;
+  onMergeCards: (sourceId: string, targetId: string) => void;
 }
 
 export function Column({
@@ -40,10 +45,15 @@ export function Column({
   votingDisabled,
   allowSelfVote,
   remainingVotes,
+  locked,
   onAddCard,
   onToggleVote,
   onEditCard,
   onDeleteCard,
+  onCreateAction,
+  onOpenSmart,
+  onToggleDoneCard,
+  onMergeCards,
 }: ColumnProps) {
   const [composerOpen, setComposerOpen] = useState(false);
   const [draft, setDraft] = useState('');
@@ -67,7 +77,11 @@ export function Column({
       </div>
       {column.description && <p className="px-1 text-xs text-ink-dim">{column.description}</p>}
 
-      {!composerOpen ? (
+      {locked ? (
+        <p className="rounded-lg border border-line bg-btn-add-bg px-3 py-2.5 text-xs text-ink-dim">
+          Ретро завершено — столбец только для чтения.
+        </p>
+      ) : !composerOpen ? (
         <button
           onClick={() => setComposerOpen(true)}
           className="w-full rounded-lg border border-line bg-btn-add-bg px-3 py-2.5 text-sm font-semibold text-ink hover:brightness-125"
@@ -127,11 +141,17 @@ export function Column({
             votingDisabled={votingDisabled}
             allowSelfVote={allowSelfVote}
             remainingVotes={remainingVotes}
+            columnKey={column.key}
+            locked={locked}
             onToggleVote={() =>
               onToggleVote(card.id, card.author_participant_id === participant.participantId)
             }
             onEdit={(text) => onEditCard(card.id, text)}
             onDelete={() => onDeleteCard(card.id)}
+            onCreateAction={() => onCreateAction(card)}
+            onOpenSmart={() => onOpenSmart(card)}
+            onToggleDone={() => onToggleDoneCard(card)}
+            onMergeDrop={(sourceId) => onMergeCards(sourceId, card.id)}
           />
         ))}
       </div>
