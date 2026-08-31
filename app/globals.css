@@ -2,9 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-bg: #1E2126;
+  --color-bg-soft: #262A31;
+  --color-btn-add-bg: #181A1F;
+  --color-panel: #2C3038;
+  --color-line: #3A3F48;
+  --color-ink: #EDEFF2;
+  --color-ink-dim: #9AA1AC;
+  --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme='light'] {
+  --color-bg: #F4F5F7;
+  --color-bg-soft: #ECEDF1;
+  --color-btn-add-bg: #E2E4EA;
+  --color-panel: #FFFFFF;
+  --color-line: #DADCE2;
+  --color-ink: #1E2126;
+  --color-ink-dim: #6B7280;
+  /* Та же по смыслу тень, что в тёмной теме, здесь смотрелась бы как яркое
+     "свечение" вокруг белых панелей — глаз воспринимает резкую границу
+     размытой тени на светлом фоне как ореол, а не как тень. Поэтому тень
+     здесь принципиально мягче: меньше размытие, ниже непрозрачность. */
+  --shadow-panel: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 body {
   @apply bg-bg text-ink min-h-screen;
   background-image:
     radial-gradient(circle at 15% 10%, rgba(244, 185, 66, 0.05), transparent 40%),
     radial-gradient(circle at 85% 90%, rgba(87, 198, 182, 0.06), transparent 45%);
+  transition: background-color .15s ease, color .15s ease;
+}
+
+/* Стандартная синяя рамка фокуса браузера почти не была заметна на тёмном
+   фоне, а на светлом стала бросаться в глаза. Не убираем фокус совсем
+   (это важно для доступности) — просто заменяем на свою, спокойную. */
+:focus-visible {
+  outline: 2px solid var(--color-ink-dim);
+  outline-offset: 2px;
 }

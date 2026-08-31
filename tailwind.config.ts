@@ -1,19 +1,23 @@
 import type { Config } from 'tailwindcss';
 
-// Палитра 1:1 перенесена из CSS-переменных прототипа (retro-board.html),
-// чтобы визуально ничего не "поплыло" при миграции.
 const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        bg: '#1E2126',
-        'bg-soft': '#262A31',
-        'btn-add-bg': '#181A1F',
-        panel: '#2C3038',
-        line: '#3A3F48',
-        ink: '#EDEFF2',
-        'ink-dim': '#9AA1AC',
+        // Нейтральная "хром"-палитра — через CSS-переменные (см.
+        // app/globals.css), чтобы переключение темы не требовало трогать
+        // ни один компонент. Акцентные/семантические цвета ниже (amber,
+        // teal, цвета столбцов и т.д.) одинаковые в обеих темах — это
+        // сознательный выбор пользователя для конкретного столбца/кнопки,
+        // а не часть темы оформления.
+        bg: 'var(--color-bg)',
+        'bg-soft': 'var(--color-bg-soft)',
+        'btn-add-bg': 'var(--color-btn-add-bg)',
+        panel: 'var(--color-panel)',
+        line: 'var(--color-line)',
+        ink: 'var(--color-ink)',
+        'ink-dim': 'var(--color-ink-dim)',
         amber: { DEFAULT: '#F4B942', ink: '#3A2E0A' },
         coral: { DEFAULT: '#EF6F6C', ink: '#3A1211' },
         teal: { DEFAULT: '#57C6B6', ink: '#0B2E29' },
@@ -27,8 +31,8 @@ const config: Config = {
         gray: '#8A9099',
       },
       fontFamily: {
-        // Fallback на Inter: у Space Grotesk нет кириллицы, для русского текста
-        // браузер сам переключится на второй шрифт в списке.
+        // У Space Grotesk нет кириллицы — для русского текста браузер сам
+        // переключится на второй шрифт в списке (Inter).
         display: ['var(--font-display)', 'var(--font-body)', 'sans-serif'],
         body: ['var(--font-body)'],
         mono: ['var(--font-mono)'],
@@ -37,7 +41,7 @@ const config: Config = {
         card: '14px',
       },
       boxShadow: {
-        panel: '0 8px 24px rgba(0,0,0,0.35)',
+        panel: 'var(--shadow-panel)',
       },
     },
   },

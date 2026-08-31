@@ -134,7 +134,10 @@ export function Card({
 
   const authorLabel = hideAuthor ? '—' : authorName;
   const voteLabel = hideVotes ? '▲' : `▲ ${voteCount}`;
-  const contentClass = hideContent ? 'select-none blur-sm' : '';
+  // Прозрачность вместе с блюром, а не просто blur — иначе на светлой теме
+  // (тёмный текст поверх белой панели) размытие даёт резкий, высококонтрастный
+  // мазок. С пониженной непрозрачностью эффект мягкий в обеих темах.
+  const contentClass = hideContent ? 'select-none blur-sm opacity-40' : '';
 
   return (
     <div

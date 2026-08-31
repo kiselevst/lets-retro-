@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createBoard } from '@/lib/board';
 import { storeParticipant } from '@/lib/participant';
+import { addBoardToHistory } from '@/lib/history';
 
 export default function CreateBoardPage() {
   const router = useRouter();
@@ -32,12 +33,13 @@ export default function CreateBoardPage() {
     try {
       const boardName = name.trim() || 'Ретроспектива команды';
       const modName = moderatorName.trim() || 'Модератор';
-      const { boardId, participantId } = await createBoard({
+      const { boardId, participantId, code } = await createBoard({
         boardName,
         moderatorName: modName,
         votesPerParticipant: clampVotes(parseInt(votesInput, 10)),
       });
       storeParticipant(boardId, { participantId, name: modName, role: 'moderator' });
+      addBoardToHistory({ boardId, name: boardName, code, createdAt: new Date().toISOString() });
       router.push(`/r/${boardId}`);
     } catch (err) {
       console.error(err);

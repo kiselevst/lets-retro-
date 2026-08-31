@@ -17,6 +17,7 @@ export interface CreateBoardParams {
 export interface CreateBoardResult {
   boardId: string;
   participantId: string;
+  code: string;
 }
 
 export async function createBoard({
@@ -28,12 +29,14 @@ export async function createBoard({
   // из 32-буквенного алфавита), но на всякий случай пробуем несколько раз,
   // а не падаем с ошибкой при первом же совпадении.
   let boardId: string | null = null;
+  let usedCode: string | null = null;
   let lastError: unknown = null;
 
   for (let attempt = 0; attempt < 5 && !boardId; attempt++) {
+    const code = generateBoardCode();
     const { data, error } = await supabase
       .from('boards')
-      .insert({ code: generateBoardCode(), name: boardName })
+      .insert({ code, name: boardName })
       .select('id')
       .single();
     if (error) {
@@ -41,8 +44,9 @@ export async function createBoard({
       continue;
     }
     boardId = data.id;
+    usedCode = code;
   }
-  if (!boardId) {
+  if (!boardId || !usedCode) {
     throw lastError instanceof Error ? lastError : new Error('Не удалось создать доску');
   }
 
@@ -66,7 +70,7 @@ export async function createBoard({
     .single();
   if (participantError) throw participantError;
 
-  return { boardId, participantId: participant.id };
+  return { boardId, participantId: participant.id, code: usedCode };
 }
 
 export async function findBoardIdByCode(code: string): Promise<string | null> {

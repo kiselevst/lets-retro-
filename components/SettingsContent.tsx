@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useBoardData } from '@/hooks/useBoardData';
 import { updateBoardSettings } from '@/lib/boardSettings';
 import { updateColumn } from '@/lib/columns';
@@ -166,6 +167,15 @@ export function SettingsContent({ boardId, onClose }: SettingsContentProps) {
             />
           ))}
         </div>
+      </div>
+
+      <div className="mt-4 border-t border-line pt-4">
+        <Link
+          href="/history"
+          className="text-xs text-ink-dim underline decoration-dotted hover:text-ink"
+        >
+          🕘 Мои доски (история)
+        </Link>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-4 border-t border-line pt-4">

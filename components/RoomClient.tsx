@@ -18,6 +18,7 @@ export function RoomClient({ board }: RoomClientProps) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     setParticipant(getStoredParticipant(board.id));
@@ -42,6 +43,17 @@ export function RoomClient({ board }: RoomClientProps) {
       setError('Не удалось присоединиться. Попробуйте ещё раз.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleCopyLink() {
+    const url = `${window.location.origin}/r/${board.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (err) {
+      console.error(err);
     }
   }
 
@@ -86,6 +98,23 @@ export function RoomClient({ board }: RoomClientProps) {
           <span className="rounded-lg border border-line bg-panel px-2.5 py-1 font-mono text-xs text-amber">
             {board.code}
           </span>
+          {participant.role === 'moderator' && (
+            <div className="relative">
+              <button
+                onClick={handleCopyLink}
+                title="Скопировать ссылку на доску"
+                aria-label="Скопировать ссылку на доску"
+                className="rounded-lg border border-line bg-panel p-1.5 text-sm leading-none text-ink hover:brightness-125"
+              >
+                🔗
+              </button>
+              {linkCopied && (
+                <span className="absolute left-1/2 top-full z-10 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-[11px] font-semibold text-bg shadow-panel">
+                  Ссылка скопирована
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-ink-dim">
