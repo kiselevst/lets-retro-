@@ -12,6 +12,7 @@ import {
   updateCardText,
   deleteCard,
   mergeCards,
+  unmergeCard,
   createActionFromCard,
   saveSmart,
   toggleCardDone,
@@ -25,19 +26,22 @@ import type { CardRow } from '@/lib/types';
 import { Column } from './Column';
 import { SmartModal } from './SmartModal';
 import { Timer } from './Timer';
+import { FinishRetroModal } from './FinishRetroModal';
 
 interface BoardProps {
   boardId: string;
+  board: { name: string; code: string };
   participant: StoredParticipant;
 }
 
-export function Board({ boardId, participant }: BoardProps) {
+export function Board({ boardId, board, participant }: BoardProps) {
   const { columns, settings, loading: columnsLoading } = useBoardData(boardId);
   const { cards, loading: cardsLoading } = useCards(boardId);
   const participants = useParticipants(boardId);
   const { votes } = useVotes(boardId);
   const timer = useTimer(boardId);
   const [smartModalCard, setSmartModalCard] = useState<CardRow | null>(null);
+  const [showFinishModal, setShowFinishModal] = useState(false);
 
   const participantNameById = new Map(participants.map((p) => [p.id, p.name]));
 
@@ -85,8 +89,18 @@ export function Board({ boardId, participant }: BoardProps) {
     if (!source || !target) return;
     if (source.column_id !== target.column_id) return;
     if (source.merged_into || target.merged_into) return;
+    const targetVoterIds = votes.filter((v) => v.card_id === targetId).map((v) => v.participant_id);
+    const sourceVoterIds = votes.filter((v) => v.card_id === sourceId).map((v) => v.participant_id);
     try {
-      await mergeCards(source, target, authorNameFor(source));
+      await mergeCards(source, target, authorNameFor(source), targetVoterIds, sourceVoterIds);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleUnmergeCard(card: CardRow) {
+    try {
+      await unmergeCard(boardId, card);
     } catch (err) {
       console.error(err);
     }
@@ -128,18 +142,6 @@ export function Board({ boardId, participant }: BoardProps) {
   async function handleToggleDone(card: CardRow) {
     try {
       await toggleCardDone(card.id, !card.done);
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  async function handleCompleteRetro() {
-    const confirmed = window.confirm(
-      'Завершить ретро? После этого редактировать можно будет только колонку «Что делаем».',
-    );
-    if (!confirmed) return;
-    try {
-      await completeRetro(boardId);
     } catch (err) {
       console.error(err);
     }
@@ -192,24 +194,19 @@ export function Board({ boardId, participant }: BoardProps) {
           </span>
         </div>
         {participant.role === 'moderator' && !isCompleted && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleToggleRevealed}
-              className="rounded-lg border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-ink hover:brightness-125"
-            >
-              {revealed ? '🙈 Скрыть карточки' : '👁 Показать карточки'}
-            </button>
-            <button
-              onClick={handleCompleteRetro}
-              className="rounded-lg border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-ink hover:brightness-125"
-            >
-              🏁 Ретро закончилось
-            </button>
-          </div>
+          <button
+            onClick={handleToggleRevealed}
+            className="rounded-lg border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-ink hover:brightness-125"
+          >
+            {revealed ? '🙈 Скрыть карточки' : '👁 Показать карточки'}
+          </button>
         )}
       </div>
 
-      <div className="grid flex-1 grid-cols-1 gap-5 p-6 md:grid-cols-3">
+      <div
+        id="retro-board-capture"
+        className="grid flex-1 grid-cols-1 gap-5 p-6 md:grid-cols-3"
+      >
         {columns.map((column) => (
           <Column
             key={column.id}
@@ -235,6 +232,7 @@ export function Board({ boardId, participant }: BoardProps) {
             onOpenSmart={(card) => setSmartModalCard(card)}
             onToggleDoneCard={handleToggleDone}
             onMergeCards={handleMergeCards}
+            onUnmergeCard={handleUnmergeCard}
           />
         ))}
       </div>
@@ -244,6 +242,41 @@ export function Board({ boardId, participant }: BoardProps) {
           card={smartModalCard}
           onSave={handleSaveSmart}
           onClose={() => setSmartModalCard(null)}
+        />
+      )}
+
+      {/* Плавающая, левее иконки темы (та сидит в правом нижнем углу) —
+          намеренно вынесена из общей панели сверху по отдельной просьбе.
+          После завершения ретро сама кнопка "Ретро закончилось" больше не
+          нужна (уже завершено) — на её месте появляется кнопка "Сохранить
+          результат", открывающая ту же модалку сразу на экране сохранения,
+          иначе после первого закрытия к JSON/PNG/ссылке было не вернуться. */}
+      {participant.role === 'moderator' && !isCompleted && (
+        <button
+          onClick={() => setShowFinishModal(true)}
+          className="fixed bottom-4 right-20 z-40 rounded-lg border border-line bg-panel px-3 py-2 text-xs font-semibold text-ink shadow-panel hover:brightness-125"
+        >
+          🏁 Ретро закончилось
+        </button>
+      )}
+      {isCompleted && (
+        <button
+          onClick={() => setShowFinishModal(true)}
+          className="fixed bottom-4 right-20 z-40 rounded-lg border border-line bg-panel px-3 py-2 text-xs font-semibold text-ink shadow-panel hover:brightness-125"
+        >
+          💾 Сохранить результат
+        </button>
+      )}
+
+      {showFinishModal && (
+        <FinishRetroModal
+          boardId={boardId}
+          boardName={board.name}
+          startOnSaveScreen={isCompleted}
+          onConfirm={async () => {
+            await completeRetro(boardId);
+          }}
+          onClose={() => setShowFinishModal(false)}
         />
       )}
     </>

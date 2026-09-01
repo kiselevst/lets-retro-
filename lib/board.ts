@@ -2,10 +2,16 @@ import { supabase } from './supabase';
 import { generateBoardCode } from './codes';
 import type { ColumnKey } from './types';
 
-const DEFAULT_COLUMNS: Array<{ key: ColumnKey; title: string; color: string; position: number }> = [
-  { key: 'well', title: 'Что было хорошо', color: 'green', position: 0 },
-  { key: 'notwell', title: 'Что хочется улучшить', color: 'orange', position: 1 },
-  { key: 'actions', title: 'Что делаем', color: 'purple', position: 2 },
+const DEFAULT_COLUMNS: Array<{
+  key: ColumnKey;
+  title: string;
+  color: string;
+  style: 'filled' | 'border';
+  position: number;
+}> = [
+  { key: 'well', title: 'Что было хорошо', color: 'green', style: 'filled', position: 0 },
+  { key: 'notwell', title: 'Что хочется улучшить', color: 'orange', style: 'filled', position: 1 },
+  { key: 'actions', title: 'Что делаем', color: 'purple', style: 'filled', position: 2 },
 ];
 
 export interface CreateBoardParams {

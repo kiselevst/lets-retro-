@@ -7,24 +7,31 @@ import { createBoard } from '@/lib/board';
 import { storeParticipant } from '@/lib/participant';
 import { addBoardToHistory } from '@/lib/history';
 
+// Поле "Голосов на участника" убрано из формы создания по просьбе заказчика
+// (2026-08-31) — решили, что раз это уже можно поменять после создания
+// доски в "⚙ Настройки", дублировать выбор на входе избыточно. Значение по
+// умолчанию (5) взято отсюда же. Весь код поля сохранён закомментированным
+// ниже — на случай, если решение пересмотрят, достаточно раскомментировать.
+const DEFAULT_VOTES_PER_PARTICIPANT = 5;
+
 export default function CreateBoardPage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [moderatorName, setModeratorName] = useState('');
-  const [votesInput, setVotesInput] = useState('5');
+  // const [votesInput, setVotesInput] = useState('5');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  function clampVotes(raw: number): number {
-    if (!Number.isFinite(raw)) return 5;
-    return Math.min(20, Math.max(1, raw));
-  }
+  // function clampVotes(raw: number): number {
+  //   if (!Number.isFinite(raw)) return 5;
+  //   return Math.min(20, Math.max(1, raw));
+  // }
 
-  function adjustVotes(delta: number) {
-    const current = parseInt(votesInput, 10);
-    const next = clampVotes((Number.isFinite(current) ? current : 5) + delta);
-    setVotesInput(String(next));
-  }
+  // function adjustVotes(delta: number) {
+  //   const current = parseInt(votesInput, 10);
+  //   const next = clampVotes((Number.isFinite(current) ? current : 5) + delta);
+  //   setVotesInput(String(next));
+  // }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -36,7 +43,8 @@ export default function CreateBoardPage() {
       const { boardId, participantId, code } = await createBoard({
         boardName,
         moderatorName: modName,
-        votesPerParticipant: clampVotes(parseInt(votesInput, 10)),
+        votesPerParticipant: DEFAULT_VOTES_PER_PARTICIPANT,
+        // votesPerParticipant: clampVotes(parseInt(votesInput, 10)),
       });
       storeParticipant(boardId, { participantId, name: modName, role: 'moderator' });
       addBoardToHistory({ boardId, name: boardName, code, createdAt: new Date().toISOString() });
@@ -76,6 +84,7 @@ export default function CreateBoardPage() {
               className="rounded-lg border border-line bg-bg-soft px-3 py-2 text-ink outline-none focus:border-amber"
             />
           </label>
+          {/*
           <div className="flex flex-col gap-1 text-sm text-ink-dim">
             <label htmlFor="votes-per-participant">Голосов на участника</label>
             <div className="flex items-center gap-2">
@@ -104,6 +113,7 @@ export default function CreateBoardPage() {
               </button>
             </div>
           </div>
+          */}
           {error && <p className="text-xs text-coral">{error}</p>}
           <button
             type="submit"

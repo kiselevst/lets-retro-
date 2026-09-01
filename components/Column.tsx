@@ -5,6 +5,8 @@ import type { ColumnRow, CardRow, VoteRow } from '@/lib/types';
 import type { StoredParticipant } from '@/lib/participant';
 import { Card } from './Card';
 
+const FALLBACK_COLOR_HEX = '#8A9099';
+
 const COLOR_HEX: Record<string, string> = {
   green: '#3FB56D',
   red: '#E5534B',
@@ -13,7 +15,7 @@ const COLOR_HEX: Record<string, string> = {
   cyan: '#3FC1D6',
   orange: '#E8963D',
   brown: '#A17953',
-  gray: '#8A9099',
+  gray: FALLBACK_COLOR_HEX,
 };
 
 interface ColumnProps {
@@ -39,6 +41,7 @@ interface ColumnProps {
   onOpenSmart: (card: CardRow) => void;
   onToggleDoneCard: (card: CardRow) => void;
   onMergeCards: (sourceId: string, targetId: string) => void;
+  onUnmergeCard: (card: CardRow) => void;
 }
 
 export function Column({
@@ -64,10 +67,14 @@ export function Column({
   onOpenSmart,
   onToggleDoneCard,
   onMergeCards,
+  onUnmergeCard,
 }: ColumnProps) {
   const [composerOpen, setComposerOpen] = useState(false);
   const [draft, setDraft] = useState('');
-  const hex = COLOR_HEX[column.color] ?? COLOR_HEX.gray;
+  // Без COLOR_HEX.gray как запасного значения — при noUncheckedIndexedAccess
+  // доступ через индексную сигнатуру (что через [], что через .) типизирован
+  // как "возможно undefined", даже если ключ 'gray' точно есть в объекте.
+  const hex = COLOR_HEX[column.color] ?? FALLBACK_COLOR_HEX;
 
   async function handleSave() {
     const trimmed = draft.trim();
@@ -99,7 +106,16 @@ export function Column({
           + Добавить
         </button>
       ) : (
-        <div className="flex flex-col gap-2 rounded-lg border border-line bg-btn-add-bg p-2.5">
+        <div
+          className={`flex flex-col gap-2 rounded-lg p-2.5 ${
+            column.style === 'filled' ? 'border-2 bg-panel' : 'border border-line'
+          }`}
+          style={
+            column.style === 'filled'
+              ? { borderColor: hex }
+              : { backgroundColor: `${hex}14` }
+          }
+        >
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -113,7 +129,8 @@ export function Column({
             placeholder="Введите текст карточки..."
             rows={3}
             autoFocus
-            className="resize-none rounded-md border border-line bg-bg-soft p-2 text-sm text-ink outline-none focus:border-amber"
+            style={{ '--focus-color': hex } as React.CSSProperties}
+            className="resize-none rounded-md border border-line bg-panel p-2 text-sm text-ink outline-none focus:border-[var(--focus-color)]"
           />
           <div className="flex gap-2">
             <button
@@ -155,6 +172,8 @@ export function Column({
             hideVotes={hideVotes}
             revealed={revealed}
             columnKey={column.key}
+            columnColorHex={hex}
+            columnStyle={column.style}
             locked={locked}
             isRemoteHovered={remoteHoveredCardId === card.id}
             onHoverStart={() => onCardHover(card.id)}
@@ -168,6 +187,7 @@ export function Column({
             onOpenSmart={() => onOpenSmart(card)}
             onToggleDone={() => onToggleDoneCard(card)}
             onMergeDrop={(sourceId) => onMergeCards(sourceId, card.id)}
+            onUnmerge={() => onUnmergeCard(card)}
           />
         ))}
       </div>

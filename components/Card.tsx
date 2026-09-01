@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, type DragEvent } from 'react';
-import type { CardRow, VoteRow, ColumnKey } from '@/lib/types';
+import { Triangle, Target, Pencil, X } from 'lucide-react';
+import type { CardRow, VoteRow, ColumnKey, ColumnStyle } from '@/lib/types';
 import type { StoredParticipant } from '@/lib/participant';
 
 interface CardProps {
@@ -16,6 +17,8 @@ interface CardProps {
   hideVotes: boolean;
   revealed: boolean;
   columnKey: ColumnKey;
+  columnColorHex: string;
+  columnStyle: ColumnStyle;
   locked: boolean;
   isRemoteHovered: boolean;
   onHoverStart: () => void;
@@ -27,6 +30,7 @@ interface CardProps {
   onOpenSmart: () => void;
   onToggleDone: () => void;
   onMergeDrop: (sourceCardId: string) => void;
+  onUnmerge: () => void;
 }
 
 export function Card({
@@ -41,6 +45,8 @@ export function Card({
   hideVotes,
   revealed,
   columnKey,
+  columnColorHex,
+  columnStyle,
   locked,
   isRemoteHovered,
   onHoverStart,
@@ -52,6 +58,7 @@ export function Card({
   onOpenSmart,
   onToggleDone,
   onMergeDrop,
+  onUnmerge,
 }: CardProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(card.text);
@@ -75,6 +82,8 @@ export function Card({
   const isMerged = Boolean(card.merged_into);
   const canDrag = !locked && !isMerged && !editing && !hideContent;
   const hasSmart = Boolean(card.smart_success || card.smart_owner || card.smart_deadline);
+  const canUnmerge =
+    !locked && !hideContent && Boolean(card.last_merge_snapshot) && (isOwner || participant.role === 'moderator');
 
   function handleDragStart(e: DragEvent<HTMLDivElement>) {
     e.dataTransfer.setData('text/plain', card.id);
@@ -109,7 +118,8 @@ export function Card({
           maxLength={500}
           rows={3}
           autoFocus
-          className="w-full resize-none rounded-md border border-line bg-bg-soft p-2 text-sm text-ink outline-none focus:border-amber"
+          style={{ '--focus-color': columnColorHex } as React.CSSProperties}
+          className="w-full resize-none rounded-md border border-line bg-bg-soft p-2 text-sm text-ink outline-none focus:border-[var(--focus-color)]"
         />
         <div className="mt-2 flex gap-2">
           <button
@@ -133,11 +143,26 @@ export function Card({
   }
 
   const authorLabel = hideAuthor ? '—' : authorName;
-  const voteLabel = hideVotes ? '▲' : `▲ ${voteCount}`;
+  // Отключённое голосование прячет и счётчик тоже — иначе на карточках
+  // остаются "зависшие" цифры голосов, хотя голосовать уже нельзя.
+  // Цифра голосов (обычный текст) остаётся эталоном размера — именно её
+  // размер и берём за образец для остальных иконок ниже.
   // Прозрачность вместе с блюром, а не просто blur — иначе на светлой теме
   // (тёмный текст поверх белой панели) размытие даёт резкий, высококонтрастный
   // мазок. С пониженной непрозрачностью эффект мягкий в обеих темах.
   const contentClass = hideContent ? 'select-none blur-sm opacity-40' : '';
+
+  // Индикаторы drag&drop/подсветки важнее цвета темы столбца — пока карточку
+  // тащат или на неё наводят курсор, её обводка всегда амбер, вне зависимости
+  // от настройки "обводка/заливка".
+  const showInteractionBorder = dragOver || isRemoteHovered;
+  const cardStyle: React.CSSProperties = {};
+  if (!showInteractionBorder && columnStyle === 'border') {
+    cardStyle.borderColor = columnColorHex;
+  }
+  if (columnStyle === 'filled') {
+    cardStyle.backgroundColor = `${columnColorHex}1F`;
+  }
 
   return (
     <div
@@ -153,9 +178,14 @@ export function Card({
       onDrop={handleDrop}
       onMouseEnter={onHoverStart}
       onMouseLeave={onHoverEnd}
+      style={cardStyle}
       className={`rounded-lg border p-3.5 shadow-panel transition-colors ${
-        dragOver ? 'border-amber' : isRemoteHovered ? 'border-amber ring-2 ring-amber/60' : 'border-line'
-      } bg-panel ${card.done && columnKey === 'actions' ? 'opacity-60' : ''}`}
+        showInteractionBorder
+          ? `border-amber${isRemoteHovered ? ' ring-2 ring-amber/60' : ''}`
+          : columnStyle === 'border'
+            ? ''
+            : 'border-line'
+      } ${columnStyle === 'filled' ? '' : 'bg-panel'} ${card.done && columnKey === 'actions' ? 'opacity-60' : ''}`}
     >
       {columnKey === 'actions' && card.done && (
         <div className="mb-2 inline-flex items-center gap-1 rounded-full border border-teal/40 bg-teal/20 px-2.5 py-0.5 font-mono text-[11px] text-teal">
@@ -210,34 +240,45 @@ export function Card({
         </div>
       )}
 
-      <div className="mt-2.5 flex items-center justify-between font-mono text-[11px] text-ink-dim">
+      <div className="mt-2.5 flex items-center justify-between font-mono text-[11px] leading-none text-ink-dim">
         <span>{authorLabel}</span>
         <div className="flex items-center gap-2">
-          <button
-            onClick={onToggleVote}
-            disabled={!canVote}
-            title={selfVoteBlocked ? 'Голосование за свои карточки отключено' : undefined}
-            className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
-              iVoted
-                ? 'border-teal bg-teal/20 text-teal'
-                : 'border-line bg-white/5 text-ink hover:bg-white/10'
-            } disabled:cursor-not-allowed disabled:opacity-40`}
-          >
-            {voteLabel}
-          </button>
+          {!votingDisabled && (
+            <button
+              onClick={onToggleVote}
+              disabled={!canVote}
+              title={selfVoteBlocked ? 'Голосование за свои карточки отключено' : undefined}
+              className={`flex items-center gap-1 text-[11px] leading-none transition-colors ${
+                iVoted ? 'text-teal' : 'text-ink-dim hover:text-ink'
+              } disabled:cursor-not-allowed disabled:opacity-40`}
+            >
+              <Triangle className="h-2.5 w-2.5" fill="currentColor" strokeWidth={0} />
+              {!hideVotes && voteCount}
+            </button>
+          )}
+
+          {canUnmerge && (
+            <button
+              onClick={onUnmerge}
+              className="text-[11px] leading-none text-ink-dim hover:text-ink"
+              title="Разъединить (отменить последнюю склейку)"
+            >
+              🔀
+            </button>
+          )}
 
           {columnKey === 'actions' && !locked && !hideContent && (
             <>
               <button
                 onClick={onOpenSmart}
-                className="text-ink-dim hover:text-ink"
+                className="text-[11px] leading-none text-ink-dim hover:text-ink"
                 title="Оформить по SMART"
               >
                 📋
               </button>
               <button
                 onClick={onToggleDone}
-                className="text-ink-dim hover:text-teal"
+                className="text-[11px] leading-none text-ink-dim hover:text-teal"
                 title={card.done ? 'Вернуть в работу' : 'Отметить выполненным'}
               >
                 {card.done ? '↺' : '✓'}
@@ -248,10 +289,10 @@ export function Card({
           {columnKey !== 'actions' && !locked && !isMerged && !hideContent && (
             <button
               onClick={onCreateAction}
-              className="text-ink-dim hover:text-ink"
+              className="flex items-center text-[11px] leading-none text-ink-dim hover:text-ink"
               title="Создать задачу"
             >
-              🎯
+              <Target className="h-2.5 w-2.5" />
             </button>
           )}
 
@@ -261,15 +302,19 @@ export function Card({
                 setDraft(card.text);
                 setEditing(true);
               }}
-              className="text-ink-dim hover:text-ink"
+              className="flex items-center text-[11px] leading-none text-ink-dim hover:text-ink"
               title="Редактировать"
             >
-              ✎
+              <Pencil className="h-2.5 w-2.5" />
             </button>
           )}
           {canDelete && (
-            <button onClick={onDelete} className="text-ink-dim hover:text-coral" title="Удалить">
-              ✕
+            <button
+              onClick={onDelete}
+              className="flex items-center text-[11px] leading-none text-ink-dim hover:text-coral"
+              title="Удалить"
+            >
+              <X className="h-2.5 w-2.5" />
             </button>
           )}
         </div>

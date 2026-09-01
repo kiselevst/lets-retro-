@@ -43,3 +43,13 @@ body {
   outline: 2px solid var(--color-ink-dim);
   outline-offset: 2px;
 }
+
+/* Поля ввода уже показывают фокус сменой цвета рамки (focus:border-amber
+   и т.п.) — общая обводка выше поверх неё даёт заметное двойное кольцо.
+   На кнопках/ссылках, у которых своего фокус-стиля нет, общая обводка
+   остаётся единственным и нужным сигналом. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}

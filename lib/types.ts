@@ -78,6 +78,24 @@ export interface CardSource {
   author: string;
 }
 
+/**
+ * Снимок состояния прямо перед последней склейкой — всё, что нужно, чтобы
+ * честно разъединить карточки обратно: текст цели до склейки и кто за что
+ * голосовал. Хранится только для ПОСЛЕДНЕЙ склейки (не полная история).
+ */
+export interface MergeUndoSnapshot {
+  targetTextBefore: string;
+  targetVoterIds: string[];
+  source: {
+    text: string;
+    author: string;
+    authorParticipantId: string | null;
+    voterIds: string[];
+    createdAt: string;
+    color: string | null;
+  };
+}
+
 export interface CardRow {
   id: string;
   board_id: string;
@@ -91,6 +109,7 @@ export interface CardRow {
   smart_success: string | null;
   smart_owner: string | null;
   smart_deadline: string | null;
+  last_merge_snapshot: MergeUndoSnapshot | null;
   position: number;
   created_at: string;
   updated_at: string;

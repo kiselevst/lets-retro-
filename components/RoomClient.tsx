@@ -131,7 +131,7 @@ export function RoomClient({ board }: RoomClientProps) {
           )}
         </div>
       </header>
-      <Board boardId={board.id} participant={participant} />
+      <Board boardId={board.id} board={board} participant={participant} />
     </div>
   );
 }

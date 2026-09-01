@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useBoardData } from '@/hooks/useBoardData';
 import { updateBoardSettings } from '@/lib/boardSettings';
-import { updateColumn } from '@/lib/columns';
+import { updateColumn, updateAllColumnsStyle } from '@/lib/columns';
 import { resetVotes, clearBoard, deleteBoard } from '@/lib/board';
-import type { SortOrder, ColumnRow } from '@/lib/types';
+import type { SortOrder, ColumnRow, ColumnStyle } from '@/lib/types';
 
 const FALLBACK_COLOR_HEX = '#8A9099';
 
@@ -93,6 +93,19 @@ export function SettingsContent({ boardId, onClose }: SettingsContentProps) {
     return <div className="p-6 text-sm text-ink-dim">Загрузка настроек…</div>;
   }
 
+  // Стиль карточек хранится в columns.style, но это единая настройка на всю
+  // доску — читаем по первому столбцу, а обновляем все разом, чтобы они не
+  // разъезжались друг с другом.
+  const cardStyle: ColumnStyle = columns[0]?.style ?? 'border';
+
+  async function handleCardStyleChange(style: ColumnStyle) {
+    try {
+      await updateAllColumnsStyle(boardId, style);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   return (
     <div className="flex max-h-[85vh] flex-col overflow-y-auto p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -153,9 +166,10 @@ export function SettingsContent({ boardId, onClose }: SettingsContentProps) {
       </div>
 
       <div className="mt-2 border-t border-line pt-4">
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-dim">
-          Столбцы
-        </h3>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-dim">Столбцы</h3>
+          <CardStyleSwitch value={cardStyle} onChange={handleCardStyleChange} />
+        </div>
         <div className="flex flex-col gap-2">
           {columns.map((col) => (
             <ColumnSettingsRow
@@ -214,20 +228,81 @@ function SettingRow({
   checked: boolean;
   onChange: (v: boolean) => void;
 }) {
+  // Локальное состояние переключается сразу по клику, не дожидаясь ответа
+  // сети (запрос в Supabase → Realtime → перезапрос данных — это
+  // ощутимая задержка, 0.5-1 сек). useEffect подхватывает реальное
+  // значение из базы, когда оно приходит — в норме оно просто совпадает с
+  // тем, что уже показано, а если кто-то другой успел поменять эту же
+  // настройку почти одновременно, синхронизация всё равно произойдёт.
+  const [localChecked, setLocalChecked] = useState(checked);
+
+  useEffect(() => {
+    setLocalChecked(checked);
+  }, [checked]);
+
+  function handleChange(next: boolean) {
+    setLocalChecked(next);
+    onChange(next);
+  }
+
   return (
     <label className="flex cursor-pointer items-center justify-between py-3 text-sm text-ink">
       <span>{label}</span>
       <span className="relative inline-flex h-5 w-9 items-center">
         <input
           type="checkbox"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
+          checked={localChecked}
+          onChange={(e) => handleChange(e.target.checked)}
           className="peer sr-only"
         />
         <span className="absolute inset-0 rounded-full border border-line bg-bg-soft transition-colors peer-checked:border-amber peer-checked:bg-amber/30" />
         <span className="absolute left-0.5 h-4 w-4 rounded-full bg-ink-dim transition-transform peer-checked:translate-x-4 peer-checked:bg-amber" />
       </span>
     </label>
+  );
+}
+
+function CardStyleSwitch({
+  value,
+  onChange,
+}: {
+  value: ColumnStyle;
+  onChange: (style: ColumnStyle) => void;
+}) {
+  // Тот же приём, что и в SettingRow — мгновенный локальный отклик вместо
+  // ожидания цикла запрос-Realtime-перезапрос.
+  const [localValue, setLocalValue] = useState(value);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  function handleChange(next: ColumnStyle) {
+    setLocalValue(next);
+    onChange(next);
+  }
+
+  return (
+    <div className="inline-flex overflow-hidden rounded-lg border border-line">
+      <button
+        type="button"
+        onClick={() => handleChange('border')}
+        className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
+          localValue === 'border' ? 'bg-amber text-amber-ink' : 'bg-bg-soft text-ink-dim hover:text-ink'
+        }`}
+      >
+        Обводка
+      </button>
+      <button
+        type="button"
+        onClick={() => handleChange('filled')}
+        className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
+          localValue === 'filled' ? 'bg-amber text-amber-ink' : 'bg-bg-soft text-ink-dim hover:text-ink'
+        }`}
+      >
+        Заливка
+      </button>
+    </div>
   );
 }
 
